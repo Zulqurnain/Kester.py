@@ -1,29 +1,34 @@
-# Unified Key Checker
+# Kester.py
 
-**A lightweight, single-file Python tool** to extract and validate API/AI/cloud keys from a single text or RTF file, classify them by platform, test them online (where possible), and produce a structured log file.
+**Kester.py** — a lightweight, single-file Python tool to extract and validate API / AI / cloud keys from one input file and classify them by platform.
 
-This repository contains `unified_key_checker.py` — a no-dependencies script (uses Python's built-in `urllib`) so it runs out-of-the-box on macOS and Windows with system Python or inside a virtual environment.
+> No external dependencies. Built on Python's standard library so it runs out-of-the-box on macOS and Windows (or inside a virtual environment).
+
+---
+
+## What it does
+
+* Reads a single input file (plain `.txt` or `.rtf`).
+* Extracts many API key formats (OpenAI, Google `AIza`, AWS `AKIA`, Groq, Ollama, DeepSeek, GitHub, and more).
+* Uses **context heuristics** and **endpoint testing** to separate Google-style keys into **GEMINI** vs **GOOGLE\_CLOUD** when possible.
+* Tests keys online where feasible (using `urllib`) and classifies them as `WORKING`, `REJECTED`, or `UNKNOWN`.
+* Writes a readable log file next to the input file (default: `kester_key_check.log`).
 
 ---
 
 ## Features
 
-* Extracts a wide range of keys from one input file (supports `.txt` and `.rtf`).
-* Recognizes and classifies keys for platforms including:
-
-  * **OpenAI** (`sk-...`)
-  * **Google** (`AIza...`) — uses heuristics + endpoint testing to separate **GEMINI** vs **GOOGLE\_CLOUD**
-  * **AWS** (Access Key IDs like `AKIA...`) — marked as *unknown* (cannot validate without secret)
-  * **Groq**, **Ollama**, **DeepSeek**, **GitHub** and more
-* Tests keys online where possible using platform-specific endpoints and records whether keys are: `WORKING`, `REJECTED`, or `UNKNOWN`.
-* Writes a human-readable log file next to the input file: `unified_key_check.log` with sections per platform.
-* No third-party packages required — works with built-in Python libraries.
+* Single-file, dependency-free Python script (`Kester.py`).
+* Supports `.txt` and `.rtf` inputs.
+* Platform-aware classification and online validation (where possible).
+* Safe for local use — no external packages required.
+* Easily extensible: add regexes or endpoints to support more providers.
 
 ---
 
-## Quick Start
+## Quick start
 
-1. **Clone** this repository (or copy `unified_key_checker.py`) into a folder.
+1. Copy `Kester.py` into a folder.
 
 2. (Optional but recommended) Create and activate a virtual environment:
 
@@ -35,104 +40,70 @@ source venv/bin/activate
 venv\Scripts\activate
 ```
 
-3. **Run** the checker against your file (plain text or RTF):
+3. Run the script against your file:
 
 ```bash
-python unified_key_checker.py /full/path/to/your/keys.txt
+python Kester.py /full/path/to/your/keys.txt
 ```
 
-4. After completion you'll see terminal output and a `unified_key_check.log` saved in the same folder as the input file.
+4. The script prints results to the terminal and saves a log file next to the input file named `kester_key_check.log`.
 
 ---
 
-## Example log layout (`unified_key_check.log`)
+## Log layout
+
+The log file is organized by platform sections, each containing three subsections:
 
 ```
-=== GEMINI ===
+=== PLATFORM ===
 -- WORKING --
-AIza...validkey1
+...keys...
 
 -- REJECTED --
-No keys
+...keys...
 
 -- UNKNOWN --
-No keys
-
-=== OPENAI ===
--- WORKING --
-sk-...workingkey
-
--- REJECTED --
-sk-...badkey
-
--- UNKNOWN --
-No keys
-
-=== AWS ===
--- WORKING --
-No keys
-
--- REJECTED --
-No keys
-
--- UNKNOWN --
-AKIA... (cannot validate without secret)
+...keys...
 ```
 
----
-
-## How classification works for Google API keys
-
-Google API keys (the public-style key that starts with `AIza`) are used for many Google services — including **Google Cloud** and the **Generative Language (Gemini)** API. Because they share the same prefix, the script:
-
-1. Extracts all `AIza` keys using a regex.
-2. Captures the surrounding text (context) around each match to detect clues like `GEMINI`, `AI_STUDIO`, `GCP`, `VERTEX`, `PROJECT_ID`.
-3. Definitively tests keys against the **Gemini** endpoint first (`generativelanguage.googleapis.com/v1/models?key=...`). If that returns 200, the key is classified as **GEMINI**.
-4. If Gemini fails, it tries a generic Google Cloud endpoint (e.g., Cloud Resource Manager). If that returns 200, the key is classified as **GOOGLE\_CLOUD**.
-5. If neither test succeeds, the script falls back to the context-based guess and marks the key `REJECTED` or `UNKNOWN`.
-
-This hybrid approach (context + endpoint testing) is more reliable than matching format alone.
+Common platform headings: `GEMINI`, `GOOGLE_CLOUD`, `OPENAI`, `AWS`, `GROQ`, `OLLAMA`, `DEEPSEEK`, `GITHUB`, `OTHER`.
 
 ---
 
-## Limitations & Notes
+## How Google key classification works
 
-* **AWS validation:** An AWS Access Key ID (e.g., `AKIA...`) cannot be validated with a simple GET — it requires a secret access key and signed request. The script marks such keys `UNKNOWN` and notes that validation needs the secret and a signed request.
-* **Rate limits & quotas:** Testing many keys rapidly may hit API rate limits. Use responsibly.
-* **False negatives:** A key may exist but be restricted to specific APIs or projects; it may fail a platform test even though it’s valid in another context.
-* **Security & privacy:** Do **not** commit logs containing real keys to public repositories. Treat logs as sensitive information. Consider redacting keys or storing logs locally only.
+Because Google API keys share the same `AIza` prefix across many services, Kester.py uses a hybrid method:
 
----
+1. Extract all `AIza...` keys and capture surrounding text.
+2. Use context hints (variable names or nearby words like `GEMINI`, `AI_STUDIO`, `GCP`, `VERTEX`) to make an initial guess.
+3. Attempt a **Gemini-specific** endpoint test first — if it returns `200`, classify as **GEMINI**.
+4. If Gemini fails, try a generic Google Cloud endpoint — success means **GOOGLE\_CLOUD**.
+5. If both fail, fall back to context-based guess and mark the key `REJECTED` or `UNKNOWN`.
 
-## Extending the script
-
-* Add new regex patterns in the `KEY_PATTERNS` dictionary.
-* Add platform endpoints and auth header styles to the `ENDPOINTS` mapping.
-* Add parallelism (thread pool) to speed up testing of many keys.
-* Output JSON/CSV summaries for programmatic consumption.
+This approach reduces false classifications compared to format-only matching.
 
 ---
 
-## Troubleshooting
+## Limitations & notes
 
-* If Python complains about missing libraries, the script is intentionally dependency-free — ensure you're running it with a standard Python 3 interpreter.
-* For macOS PEP 668 errors, use a virtual environment (see Quick Start).
-* If `.rtf` files appear to include garbage, open and save them as **Plain Text** or let the script parse them (it ignores RTF control characters but may still capture tokens).
-
----
-
-## Security Reminder
-
-**DO NOT** push real API credentials to public repositories. Use this tool locally and securely. If you need to share results, redact or replace keys with placeholders.
+* **AWS keys:** An AWS Access Key ID (e.g., `AKIA...`) cannot be validated without the secret access key and a signed request — Kester marks these as `UNKNOWN`.
+* **Rate limits:** Rapidly testing many keys may hit provider rate limits — use responsibly.
+* **Restricted keys:** A key may exist but be limited to specific APIs or projects; tests against particular endpoints may fail even though the key is otherwise valid.
+* **Security:** **Do not** commit real keys or logs to a public repo. Treat logs as sensitive data; consider redaction before sharing.
 
 ---
 
-## License
+## Extending Kester.py
 
-This repository is provided under the **MIT License** — see `LICENSE` for details.
+* Add new patterns in the `KEY_PATTERNS` section.
+* Add or change endpoints in the `ENDPOINTS` mapping.
+* Add parallelism (thread pool) to speed up many checks.
+* Export JSON/CSV summaries in addition to the human-readable log.
 
 ---
 
-## Contributing
+## License & contribution
 
-Contributions, bug reports, and feature requests are welcome. Open a GitHub issue or send a pull request.
+This project is licensed under the MIT License. See `LICENSE` for details.
+
+Contributions, issues, and feature requests are welcome — open a GitHub issue or a pull request.
