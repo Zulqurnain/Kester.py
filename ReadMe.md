@@ -48,6 +48,9 @@ python Kester.py /full/path/to/your/keys.txt
 
 4. The script prints results to the terminal and saves a log file next to the input file named `kester_key_check.log`.
 
+<img width="1134" height="732" alt="Untitled design" src="https://github.com/user-attachments/assets/a9ff9ef8-0ed3-4f13-8a7f-6c256947a3f9" />
+
+
 ---
 
 ## Log layout
