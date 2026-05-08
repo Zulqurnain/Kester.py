@@ -110,3 +110,9 @@ This approach reduces false classifications compared to format-only matching.
 This project is licensed under the MIT License. See `LICENSE` for details.
 
 Contributions, issues, and feature requests are welcome — open a GitHub issue or a pull request.
+
+---
+
+**Built by [Zulqurnain Haider](https://zulqurnainj.com/) — Senior Full Stack Engineer**
+
+For full portfolio visit: [https://zulqurnainj.com/](https://zulqurnainj.com/)
